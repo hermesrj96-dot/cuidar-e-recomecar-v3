@@ -9,4 +9,4 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "cuidar-recomecar-v3"
-database_id = "PREENCHER_COM_O_DATABASE_ID_DO_D1_EXISTENTE"
+database_id = "03f1b785-be1e-491c-b7a1-cd6e025fb266"
