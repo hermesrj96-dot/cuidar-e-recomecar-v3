@@ -145,7 +145,7 @@ export default {
               .bind(cleanText(body.name,100),cleanText(body.description,500)).run();
             return json({success:true,id:result.meta.last_row_id},201);
           }
-          const categoryMatch = path.match(/^\\/api\\/admin\\/categories\\/(\\d+)$/);
+          const categoryMatch = path.match(/^\/api\/admin\/categories\/(\d+)$/);
           if (categoryMatch && method === 'PATCH') {
             const body = await readJson(request);
             await env.DB.prepare('UPDATE categories SET active=? WHERE id=?')
