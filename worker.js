@@ -126,6 +126,46 @@ export default {
         if (path.startsWith('/api/admin/')) {
           if (!(await isAdmin(request, env))) return json({ error: 'Acesso não autorizado.' }, 401);
 
+          if (path === '/api/admin/stats' && method === 'GET') {
+            const [products, orders, customers, sales] = await Promise.all([
+              env.DB.prepare('SELECT COUNT(*) AS n FROM products').first(),
+              env.DB.prepare('SELECT COUNT(*) AS n FROM orders').first(),
+              env.DB.prepare('SELECT COUNT(*) AS n FROM customers').first(),
+              env.DB.prepare("SELECT COALESCE(SUM(total),0) AS n FROM orders WHERE status NOT IN ('Cancelado')").first()
+            ]);
+            return json({ products: products.n, orders: orders.n, customers: customers.n, sales: sales.n });
+          }
+          if (path === '/api/admin/categories' && method === 'GET') {
+            return json((await env.DB.prepare('SELECT id,name,description,active FROM categories ORDER BY name').all()).results);
+          }
+          if (path === '/api/admin/categories' && method === 'POST') {
+            const body = await readJson(request);
+            if (!body || !cleanText(body.name,100)) return json({error:'Informe o nome da categoria.'},400);
+            const result = await env.DB.prepare('INSERT INTO categories(name,description,active) VALUES(?,?,1)')
+              .bind(cleanText(body.name,100),cleanText(body.description,500)).run();
+            return json({success:true,id:result.meta.last_row_id},201);
+          }
+          const categoryMatch = path.match(/^\\/api\\/admin\\/categories\\/(\\d+)$/);
+          if (categoryMatch && method === 'PATCH') {
+            const body = await readJson(request);
+            await env.DB.prepare('UPDATE categories SET active=? WHERE id=?')
+              .bind(body && body.active ? 1 : 0,Number(categoryMatch[1])).run();
+            return json({success:true});
+          }
+          if (path === '/api/admin/customers' && method === 'GET') {
+            return json((await env.DB.prepare(`SELECT c.id,c.full_name,c.whatsapp,c.address,
+              COUNT(o.id) AS orders,COALESCE(SUM(CASE WHEN o.status != 'Cancelado' THEN o.total ELSE 0 END),0) AS total
+              FROM customers c LEFT JOIN orders o ON o.customer_id=c.id
+              GROUP BY c.id ORDER BY c.id DESC LIMIT 500`).all()).results);
+          }
+          if (path === '/api/admin/reports' && method === 'GET') {
+            const r = await env.DB.prepare(`SELECT COUNT(*) AS orders,
+              SUM(CASE WHEN status IN ('Confirmado','Preparando','Entregue') THEN 1 ELSE 0 END) AS completed,
+              SUM(CASE WHEN status='Cancelado' THEN 1 ELSE 0 END) AS cancelled,
+              COALESCE(SUM(CASE WHEN status!='Cancelado' THEN total ELSE 0 END),0) AS sales
+              FROM orders`).first();
+            return json({orders:r.orders||0,completed:r.completed||0,cancelled:r.cancelled||0,sales:r.sales||0});
+          }
           if (path === '/api/admin/products' && method === 'GET') {
             return json((await env.DB.prepare('SELECT * FROM products ORDER BY id DESC').all()).results);
           }
