@@ -1,0 +1,127 @@
+CUIDAR E RECOMEÇAR V3 — PACOTE AJUSTADO AO D1 JÁ CRIADO
+=======================================================
+
+ESTE PACOTE FOI PREPARADO PARA CONTINUAR DO PONTO EM QUE PARAMOS:
+- Banco D1 existente: cuidar-recomecar-v3
+- Tabelas já criadas anteriormente no Console D1:
+  categories, products, customers, orders, order_items, settings, audit_logs
+- Worker existente: cuidar-recomecar-v3
+- Associação D1 esperada no Worker: variável DB apontando para cuidar-recomecar-v3
+
+IMPORTANTE: NÃO execute uma migração para recriar as tabelas. O pacote NÃO inclui migração inicial para evitar conflito com o banco já criado.
+
+O QUE VEM NO ZIP
+----------------
+worker.js                 API do Worker e conexão D1
+public/index.html         Loja pública
+public/app.js             Catálogo, pesquisa, filtros e compra via WhatsApp
+public/admin.html         Painel administrativo
+public/admin.js           Login, produtos e pedidos
+public/styles.css         Layout responsivo
+wrangler.toml             Configuração do projeto (falta preencher o ID do D1)
+sql/VERIFICAR_BANCO_EXISTENTE.sql
+                          Consulta para conferir as sete tabelas
+sql/IMPORTAR_CATALOGO_V2_SEGURO.sql
+                          Importa os 20 produtos do catálogo anterior sem duplicar nomes
+
+docs/catalogo_v2_original.json
+                          Cópia de referência do catálogo anterior
+docs/catalogo_novembro.csv
+                          Catálogo em CSV
+
+ANTES DE PUBLICAR — BACKUP E IDENTIFICADOR D1
+---------------------------------------------
+1. Faça backup do D1 na tela do banco, se a opção estiver disponível.
+2. Abra Cloudflare Dashboard > D1 > cuidar-recomecar-v3.
+3. Copie o Database ID (não é senha nem token).
+4. Abra wrangler.toml e substitua o texto:
+   PREENCHER_COM_O_DATABASE_ID_DO_D1_EXISTENTE
+   pelo Database ID copiado.
+5. Não altere o nome do banco nem a variável DB.
+
+IMPORTAR O CATÁLOGO (OPCIONAL)
+------------------------------
+As sete tabelas já existem. NÃO execute nenhum SQL CREATE TABLE.
+Para inserir os 20 produtos de referência, use o arquivo:
+  sql/IMPORTAR_CATALOGO_V2_SEGURO.sql
+
+Com Wrangler instalado e autenticado, na pasta do projeto execute:
+  npx wrangler d1 execute cuidar-recomecar-v3 --remote --file=sql/IMPORTAR_CATALOGO_V2_SEGURO.sql
+
+O script usa INSERT ... WHERE NOT EXISTS para não inserir novamente produtos com o mesmo nome. Se preferir começar com catálogo vazio, pule esta etapa e cadastre os produtos pelo painel.
+
+INSTALAÇÃO NO COMPUTADOR (RECOMENDADA)
+--------------------------------------
+Requisitos: Node.js LTS e conexão com internet.
+
+1. Extraia o ZIP.
+2. Abra o terminal dentro da pasta CUIDAR_RECOMECAR_V3_UPLOAD.
+3. Instale/execute Wrangler:
+   npm install
+   (Se não houver package.json, use diretamente: npx wrangler --version)
+4. Autentique na Cloudflare:
+   npx wrangler login
+5. Confira a configuração e o Database ID em wrangler.toml.
+6. Configure a senha do painel como segredo (não coloque senha no código):
+   npx wrangler secret put ADMIN_PASSWORD
+   Digite uma senha forte quando solicitado.
+7. Configure a chave de assinatura das sessões:
+   npx wrangler secret put SESSION_SECRET
+   Informe uma sequência aleatória longa, com pelo menos 32 caracteres.
+8. Publique Worker + arquivos da loja:
+   npx wrangler deploy
+9. Teste:
+   https://SEU-WORKER.workers.dev/api/health
+10. Abra a loja:
+   https://SEU-WORKER.workers.dev/
+11. Abra o painel:
+   https://SEU-WORKER.workers.dev/admin.html
+
+SE O WORKER JÁ TEM A ASSOCIAÇÃO D1 NA DASHBOARD
+------------------------------------------------
+O arquivo wrangler.toml também declara a associação DB. Ao publicar via Wrangler, confirme que o Database ID é o mesmo banco existente. Não crie outro banco e não mude o binding DB.
+
+O QUE O SISTEMA FAZ
+-------------------
+- Loja pública com pesquisa, categorias e ordenação.
+- Produtos carregados do D1.
+- Botão de consulta/compra abre WhatsApp (22) 99923-5268.
+- Painel /admin.html protegido por senha do lado do servidor.
+- Cadastro, edição, ativação, destaque, preço, entrada ilustrativa, imagem e estoque dos produtos.
+- Consulta de pedidos e atualização de status.
+- Pedidos gravados em customers, orders e order_items quando enviados pela API.
+- Teste de conexão /api/health.
+
+ROTAS PRINCIPAIS
+----------------
+GET    /api/health
+GET    /api/products
+GET    /api/categories
+POST   /api/orders
+POST   /api/login
+POST   /api/logout
+GET    /api/me
+GET    /api/admin/products
+POST   /api/admin/products
+PUT    /api/admin/products/:id
+DELETE /api/admin/products/:id
+GET    /api/admin/orders
+PATCH  /api/admin/orders/:id
+
+LIMITES E SEGURANÇA
+-------------------
+- Nenhuma senha ou token está incluído no ZIP.
+- Não envie ADMIN_PASSWORD, SESSION_SECRET, token ou chave API por WhatsApp ou aqui no chat.
+- O sistema não processa pagamentos com cartão. Não colete número do cartão, CVV ou senha.
+- O botão público atual direciona a conversa para WhatsApp; o endpoint de pedidos fica disponível para futura integração com formulário de checkout.
+- Imagens de produtos usam URLs externas; R2 não é necessário nesta etapa.
+- Antes de usar com clientes reais, adicione proteção anti-spam (ex.: Turnstile), aviso de privacidade/consentimento LGPD, teste de backup e revisão de segurança.
+- Os preços do catálogo são referências importadas do arquivo anterior e devem ser conferidos/atualizados antes de anunciar.
+
+UPLOAD DIRETO PELO EDITOR WEB
+-----------------------------
+O editor rápido do Worker não importa um ZIP com múltiplos arquivos e pastas. Para publicar o conjunto completo (Worker + pasta public + configuração D1), use Wrangler no computador ou conecte um repositório Git. Não cole o conteúdo de vários arquivos dentro de worker.js.
+
+SUPORTE
+-------
+Se houver erro na publicação, copie a mensagem completa e a linha/arquivo. Nunca compartilhe segredos ou credenciais.

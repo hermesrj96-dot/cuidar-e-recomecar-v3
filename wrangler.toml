@@ -1,0 +1,12 @@
+name = "cuidar-recomecar-v3"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "cuidar-recomecar-v3"
+database_id = "PREENCHER_COM_O_DATABASE_ID_DO_D1_EXISTENTE"
